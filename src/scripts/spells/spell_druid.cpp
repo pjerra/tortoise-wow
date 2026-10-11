@@ -465,21 +465,21 @@ struct spell_druid_healing_touch : public SpellScript
         if (!ok || !spell || !spell->m_casterUnit || !spell->GetPowerCost())
             return;
 
+        // Entries in m_appliedMods are only safe to compare, never to dereference: when an aura is
+        // removed during the cast its modifier is deleted (Player::AddSpellMod) but stays in the list.
+        // Look up the live Aessina's Bloom buff instead and check that its modifier was applied to this
+        // cast. OnFinish runs before Player::RemoveSpellMods consumes the buff, so it is still here.
         int32 refundPct = 0;
-        for (SpellModifier const* mod : spell->m_appliedMods)
+        for (uint32 bloomId : { SPELL_DRUID_AESSINAS_BLOOM_BUFF_RANK_1, SPELL_DRUID_AESSINAS_BLOOM_BUFF_RANK_2 })
         {
-            if (!mod || !mod->ownerAura)
-                continue;
-
-            switch (mod->ownerAura->GetId())
+            for (uint32 eff = EFFECT_INDEX_0; eff < MAX_EFFECT_INDEX; ++eff)
             {
-                case SPELL_DRUID_AESSINAS_BLOOM_BUFF_RANK_1:
-                case SPELL_DRUID_AESSINAS_BLOOM_BUFF_RANK_2:
-                    if (SpellEntry const* bloomInfo = mod->ownerAura->GetSpellProto())
-                        refundPct = std::max(refundPct, bloomInfo->CalculateSimpleValue(EFFECT_INDEX_0));
-                    break;
-                default:
-                    break;
+                Aura* aura = spell->m_casterUnit->GetAura(bloomId, SpellEffectIndex(eff));
+                if (!aura || !aura->GetSpellModifier() || !spell->HasModifierApplied(aura->GetSpellModifier()))
+                    continue;
+
+                if (SpellEntry const* bloomInfo = aura->GetSpellProto())
+                    refundPct = std::max(refundPct, bloomInfo->CalculateSimpleValue(EFFECT_INDEX_0));
             }
         }
 
