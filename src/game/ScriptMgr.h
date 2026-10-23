@@ -40,7 +40,6 @@
 #include <set>
 
 struct AreaTriggerEntry;
-struct AreaTriggerTeleport;
 struct CleanDamage;
 class Aura;
 class Object;
@@ -1614,7 +1613,7 @@ class ScriptMgr
         bool OnGossipHello(Player* pPlayer, GameObject* pGameObject);
         bool IsBotManaged(Player* who);
         uint8 GetBotRoles(Player* who);
-        void GetBotRepopEntrance(Player* bot, uint32 mapId, float x, float y, float z, AreaTriggerTeleport const*& entrance);
+        uint32 GetBotRepopEntrance(Player* bot, uint32 mapId, float x, float y, float z);
         bool OnAddonMessage(Player* from, std::string const& msg);
         bool OnGossipSelect(Player* pPlayer, Creature* pCreature, uint32 sender, uint32 action, const char* code);
         bool OnGossipSelect(Player* pPlayer, GameObject* pGameObject, uint32 sender, uint32 action, const char* code);

@@ -1886,20 +1886,13 @@ uint8 ScriptMgr::GetBotRoles(Player* who)
     return roles;
 }
 
-// The first module answer wins; no answer leaves `entrance` as the caller set it.
-void ScriptMgr::GetBotRepopEntrance(Player* bot, uint32 mapId, float x, float y, float z, AreaTriggerTeleport const*& entrance)
+// The first module answer (a trigger id) wins; 0: no answer.
+uint32 ScriptMgr::GetBotRepopEntrance(Player* bot, uint32 mapId, float x, float y, float z)
 {
-    bool answered = false;
+    uint32 triggerId = 0;
     ScriptRegistry<PlayerScript>::ForEachEnabledHook(PLAYERHOOK_GET_BOT_REPOP_ENTRANCE,
-        [&](PlayerScript* script)
-        {
-            AreaTriggerTeleport const* pick = nullptr;
-            if (!answered && script->GetBotRepopEntrance(bot, mapId, x, y, z, pick) && pick)
-            {
-                entrance = pick;
-                answered = true;
-            }
-        });
+        [&](PlayerScript* script) { if (!triggerId) triggerId = script->GetBotRepopEntrance(bot, mapId, x, y, z); });
+    return triggerId;
 }
 
 bool ScriptMgr::OnAddonMessage(Player* from, std::string const& msg)
