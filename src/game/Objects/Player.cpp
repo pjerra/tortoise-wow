@@ -6478,7 +6478,16 @@ void Player::RepopAtGraveyard()
 
     if (!IsAlive() && repopAtEntrance && GetMap() && GetMap()->IsDungeon())
     {
-        if (AreaTriggerTeleport const* entrance = sObjectMgr.GetMapEntranceTrigger(GetMapId()))
+        AreaTriggerTeleport const* entrance = sObjectMgr.GetMapEntranceTrigger(GetMapId());
+        // The lowest trigger id is one fixed door (Scarlet Monastery: always the
+        // Graveyard wing). The module may name the door nearest the corpse; no
+        // answer keeps the trigger above.
+        float x = GetPositionX(), y = GetPositionY(), z = GetPositionZ();
+        if (Corpse* corpse = GetCorpse())
+            if (corpse->GetMapId() == GetMapId())
+                corpse->GetPosition(x, y, z);
+        sScriptMgr.GetBotRepopEntrance(this, GetMapId(), x, y, z, entrance);
+        if (entrance)
         {
             ResurrectPlayer(1.0f);
             SpawnCorpseBones();
