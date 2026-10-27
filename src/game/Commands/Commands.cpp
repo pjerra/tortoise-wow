@@ -35,6 +35,7 @@
 #include "ItemEnchantmentMgr.h"
 #include "Language.h"
 #include "Log.h"
+#include "LFTMgr.h"
 #include "LootMgr.h"
 #include "Mail.h"
 #include "MapManager.h"
@@ -19345,4 +19346,132 @@ bool ChatHandler::HandleAccountGetNameCommand(char* args)
     PSendSysMessage("Account %u is named '%s'.", accountId, pData->Username.c_str());
 
     return true;
+}
+
+// TEST ONLY: .lftapi probe for the LFT listing API (test/lft-api-cmd, never merged).
+// Calls the five LFTManager API functions on a named character and prints the
+// bool result (and the snapshot for list). Usage:
+//   .lftapi create <leader> <category> <t:h:d> <title>|<desc>
+//   .lftapi remove <leader>
+//   .lftapi accept <leader> <member> <t|h|d>
+//   .lftapi decline <leader> <member>
+//   .lftapi list
+bool ChatHandler::HandleLftApiCommand(char* args)
+{
+    if (!*args)
+        return false;
+
+    char* sub = ExtractArg(&args);
+    if (!sub)
+        return false;
+
+    if (!strcmp(sub, "list"))
+    {
+        std::vector<LFTManager::GroupListingInfo> listings = sLFTMgr.GetGroupListings();
+        PSendSysMessage("listings: %u", (uint32)listings.size());
+        for (LFTManager::GroupListingInfo const& info : listings)
+        {
+            PSendSysMessage("id %u creator %s cat %u limit %u:%u:%u confirmed %u:%u:%u title '%s' desc '%s'",
+                info.id, info.creator.c_str(), (uint32)info.category,
+                (uint32)info.limit[0], (uint32)info.limit[1], (uint32)info.limit[2],
+                (uint32)info.numConfirmed[0], (uint32)info.numConfirmed[1], (uint32)info.numConfirmed[2],
+                info.title.c_str(), info.description.c_str());
+            for (LFTManager::ListingSignupInfo const& row : info.signups)
+                PSendSysMessage("  row %s %s %u role %u", row.name.c_str(), row.className.c_str(), row.level, (uint32)row.role);
+        }
+        return true;
+    }
+
+    char* leaderName = ExtractArg(&args);
+    if (!leaderName)
+        return false;
+
+    Player* leader = sObjectMgr.GetPlayer(leaderName);
+    if (!leader)
+    {
+        PSendSysMessage("lftapi: '%s' not online.", leaderName);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    if (!strcmp(sub, "remove"))
+    {
+        PSendSysMessage("remove: %s", sLFTMgr.RemoveGroupListing(leader) ? "true" : "false");
+        return true;
+    }
+
+    if (!strcmp(sub, "create"))
+    {
+        char* catArg = ExtractArg(&args);
+        char* limitsArg = ExtractArg(&args);
+        if (!catArg || !limitsArg || !*args)
+            return false;
+
+        uint8 category = (uint8)strtoul(catArg, nullptr, 10);
+        std::array<uint8, 3> limits = {{0, 0, 0}};
+        char* p = limitsArg;
+        for (uint8 i = 0; i < 3; ++i)
+        {
+            if (!*p && i)
+                break;
+            limits[i] = (uint8)strtoul(p, nullptr, 10);
+            char* colon = strchr(p, ':');
+            p = colon ? colon + 1 : p + strlen(p);
+        }
+
+        std::string text = args;
+        std::string title = text;
+        std::string description;
+        size_t sep = text.find('|');
+        if (sep != std::string::npos)
+        {
+            title = text.substr(0, sep);
+            description = text.substr(sep + 1);
+        }
+
+        uint32 listingId = 0;
+        bool ok = sLFTMgr.CreateGroupListing(leader, title, description, category, limits, &listingId);
+        PSendSysMessage("create: %s%s", ok ? "true" : "false", ok ? (" id " + std::to_string(listingId)).c_str() : "");
+        return true;
+    }
+
+    char* memberName = ExtractArg(&args);
+    if (!memberName)
+        return false;
+
+    Player* member = sObjectMgr.GetPlayer(memberName);
+    if (!member)
+    {
+        PSendSysMessage("lftapi: '%s' not online.", memberName);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    if (!strcmp(sub, "accept"))
+    {
+        char* roleArg = ExtractArg(&args);
+        if (!roleArg)
+            return false;
+
+        uint8 role = 0;
+        if (!strcmp(roleArg, "t"))
+            role = LFT_ROLE_TANK;
+        else if (!strcmp(roleArg, "h"))
+            role = LFT_ROLE_HEALER;
+        else if (!strcmp(roleArg, "d"))
+            role = LFT_ROLE_DAMAGE;
+        else
+            return false;
+
+        PSendSysMessage("accept: %s", sLFTMgr.AcceptListingSignup(leader, member->GetObjectGuid(), role) ? "true" : "false");
+        return true;
+    }
+
+    if (!strcmp(sub, "decline"))
+    {
+        PSendSysMessage("decline: %s", sLFTMgr.DeclineListingSignup(leader, member->GetObjectGuid()) ? "true" : "false");
+        return true;
+    }
+
+    return false;
 }
