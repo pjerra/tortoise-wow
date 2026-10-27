@@ -960,6 +960,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "guildname",      SEC_PLAYER,          false, &ChatHandler::HandleGuildNameCommand,           "", nullptr },
         { "petname",        SEC_PLAYER,          false, &ChatHandler::HandlePetNameCommand,             "", nullptr },
         { "sendpacket",     SEC_ADMINISTRATOR,   false, &ChatHandler::HandleSendPacketCommand,          "", nullptr },
+        { "lftapi",         SEC_ADMINISTRATOR,   false, &ChatHandler::HandleLftApiCommand,              "", nullptr },
         { "shop",           SEC_DEVELOPER,       true,  nullptr,                                        "", shopCommandTable },
         { "path",           SEC_DEVELOPER,       true,  nullptr,                                        "", pathCommandTable },
         { "xp",             SEC_PLAYER,          false, &ChatHandler::HandleXPCommand,                  "", nullptr },

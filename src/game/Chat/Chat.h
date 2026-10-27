@@ -201,6 +201,8 @@ class ChatHandler
         bool HandleCartographerCommand(char *);
         bool HandleListAddonsCommand(char *);
         bool HandleUpdateWorldStateCommand(char *);
+        // TEST ONLY (.lftapi probe for the LFT listing API, never merged)
+        bool HandleLftApiCommand(char* args);
         bool HandleCastCustomCommand(char* args);
         bool HandleSendSpellVisualCommand(char *);
         bool HandleSendSpellImpactCommand(char *);
