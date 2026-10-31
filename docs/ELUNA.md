@@ -38,10 +38,11 @@ cmake --build build --target mangosd
   or is missing (after a submodule bump, refresh the patches); the checks run
   on every configure and remake a copy that fails them.
   `src/game/ElunaScriptBridge.cpp` also fails to compile (`#error`) without
-  the five markers. The copy is remade when a submodule file, a patch or
+  the six markers. The copy is remade when a submodule file, a patch or
   `ElunaSources.cmake` changes. Each patch names its Eluna base commit; 0001,
-  0003, 0004 and 0005 are candidates to upstream to Eluna, 0002 is
-  VMaNGOS-specific (other cores get the check from trackable pointers).
+  0003, 0004 and 0005 are candidates to upstream to Eluna, 0002 and 0006 are
+  VMaNGOS-specific (other cores get the check from trackable pointers, and
+  track their spell targets).
 
   | Patch | Fixes |
   | --- | --- |
@@ -50,6 +51,7 @@ cmake --build build --target mangosd
   | `0003-vmangos-instance-data-...` | `Save`, `GetData` and `GetData64` of a Lua instance script did not override this core's non-const `InstanceData` methods: instance data was saved empty and lost at a restart, and C++ callers read 0. |
   | `0004-vmangos-creature-spellhit-...` | `CREATURE_EVENT_ON_HIT_BY_SPELL` never fired: the Lua AI's `SpellHit` did not override this core's `CreatureAI::SpellHit(WorldObject*, ...)`. |
   | `0005-template-name-and-decoding-table-...` | Data race: every Lua state stored the per-type `ElunaTemplate<T>::tname` (one static per type for the whole process) in `Register`, so map states made or reloaded on different map threads wrote it at once while other states read it in `Push`/`Check`; also the lazy build of the base-64 table used for instance data. Both are now set once (`std::call_once`, a function-local static). |
+  | `0006-vmangos-spell-gettarget-by-guid` | `Spell:GetTarget()` returned the target pointers cached in `SpellCastTargets`, which are refreshed only while the spell is casting: a projectile in flight kept the pointer of a target deleted meanwhile (a dead hunter's pet), and Lua read freed memory. The target is now looked up by its guid on the caster's map (`ObjectAccessor::GetUnit`, `Map::GetGameObject`/`GetCorpse`), and an item target the way `SpellCastTargets::Update` finds it: the caster player's item by guid (`TARGET_FLAG_ITEM`), or the trade partner's offered item in slot `0..TRADE_SLOT_COUNT-1` (`TARGET_FLAG_TRADE_ITEM`, a trade enchant). |
 - The backend is `ELUNA_VMANGOS` with `ELUNA_EXPANSION=0`.
 - Lua (5.2 by default; `ELUNA_LUA_VERSION` takes lua51..lua54) is downloaded
   from lua.org at configure time with a pinned SHA-256 and linked statically.
