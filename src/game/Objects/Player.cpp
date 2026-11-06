@@ -6483,16 +6483,20 @@ void Player::RepopAtGraveyard()
         // The lowest trigger id is one fixed door (Scarlet Monastery: always the
         // Graveyard wing). The module may name the door nearest the corpse by
         // trigger id; only a registered door into this map with valid coordinates
-        // is taken, anything else keeps the trigger above.
+        // is taken, anything else keeps the trigger above. A registered door is a
+        // trigger that stands outside the map and teleports into it, so a trigger
+        // inside the map never counts (as in PR #658).
         float x = GetPositionX(), y = GetPositionY(), z = GetPositionZ();
         if (Corpse* corpse = GetCorpse())
             if (corpse->GetMapId() == GetMapId())
                 corpse->GetPosition(x, y, z);
         if (uint32 const pickId = sScriptMgr.GetBotRepopEntrance(this, GetMapId(), x, y, z))
-            if (AreaTriggerTeleport const* pick = sObjectMgr.GetAreaTriggerTeleport(pickId))
-                if (pick->destination.mapId == GetMapId() && MaNGOS::IsValidMapCoord(pick->destination.x,
-                        pick->destination.y, pick->destination.z, pick->destination.o))
-                    entrance = pick;
+            if (AreaTriggerEntry const* at = sObjectMgr.GetAreaTrigger(pickId))
+                if (at->mapid != GetMapId())
+                    if (AreaTriggerTeleport const* pick = sObjectMgr.GetAreaTriggerTeleport(pickId))
+                        if (pick->destination.mapId == GetMapId() && MaNGOS::IsValidMapCoord(pick->destination.x,
+                                pick->destination.y, pick->destination.z, pick->destination.o))
+                            entrance = pick;
         if (entrance)
         {
             ResurrectPlayer(1.0f);
